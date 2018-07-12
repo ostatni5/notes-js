@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Death NOTES</title>
+    <style>
+        note {
+            display: block;
+            width: 150px;
+            height: 150px;
+            border: 1px solid black;
+            padding: 5px;
+            position: absolute;
+            overflow: hidden;
+            background: white;
+
+        }
+
+        .note-resize {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+        }
+
+        .note-delete {
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
+
+        .info {
+            position: fixed;
+            right: 100px;
+            top: 10px;
+        }
+
+        .editor {
+            background: white;
+            position: fixed;
+            left: 20%;
+            top: 10%;
+            width: 60%;
+
+            z-index: 10000;
+        }
+
+        .editor-box {
+            min-height: 400px;
+            height: 100%;
+        }
+
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.6/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.6/angular-route.js"></script>
+
+    <!-- Main Quill library -->
+    <script src="https://cdn.quilljs.com/1.3.4/quill.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.4/quill.min.js"></script>
+
+    <!-- Theme included stylesheets -->
+    <link href="https://cdn.quilljs.com/1.3.4/quill.snow.css" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.4/quill.bubble.css" rel="stylesheet">
+
+    <script>
+        var app = angular.module("myApp", []);
+
+
+        app.service("net", function($rootScope, $http) {
+            function connect(obj) {
+                $http({
+                    method: 'POST',
+                    url: 'tab.php',
+                    data: obj,
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                }).then(function successCallback(response) {
+                    // this callback will be called asynchronously
+                    // when the response is available
+                    console.log("Correct", response.data)
+                }, function errorCallback(response) {
+                    // called asynchronously if an error occurs
+                    // or server returns response with an error status.
+                    console.error(response)
+                });
+            }
+            this.test = function() {
+                connect({
+                    a: 0
+                });
+            }
+            this.addNote = function(obj) {
+                console.log("AddoNoto");
+                connect({
+                    a: 1,
+                    data: obj
+                });
+            }
+            this.delNote = function(obj) {
+                console.log("del");
+                connect({
+                    a: 2,
+                    data: obj
+                });
+            }
+            this.moveNote = function(obj) {
+                console.log("move");
+                connect({
+                    a: 3,
+                    data: obj
+                });
+            }
+            this.editNote = function(obj) {
+                console.log("edit");
+                connect({
+                    a: 4,
+                    data: obj
+                });
+            }
+            this.resizeNote = function(obj) {
+                console.log("resize");
+                connect({
+                    a: 5,
+                    data: obj
+                });
+            }
+            this.indexNote = function(obj) {
+                console.log("index");
+                connect({
+                    a: 6,
+                    data: obj
+                });
+            }
+            this.getTotal = function(call) {
+                $http({
+                    method: 'POST',
+                    url: 'tab.php',
+                    data: {
+                        a: 7
+                    },
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                }).then(function successCallback(response) {
+                    // this callback will be called asynchronously
+                    // when the response is available
+                    console.log("Correct", response.data)
+                    call(response.data)
+                }, function errorCallback(response) {
+                    // called asynchronously if an error occurs
+                    // or server returns response with an error status.
+                    console.error(response)
+                });
+            }
+        })
+
+
+        app.service("del", function($rootScope, net) {
+            this.init = function(el, toDelete) {
+                var el = angular.element(el);
+
+                el.on("click", function() {
+                    console.log("Deluj sie");
+                    var index = $rootScope.notes.indexOf(toDelete);
+                    if (index > -1) {
+                        array.splice(index, 1);
+                    }
+                    toDelete.remove();
+                    $rootScope.noteCount--;
+                    $rootScope.$apply()
+                    net.delNote({
+                        timeid: toDelete.userData.timeid
+                    })
+                })
+            }
+        })
+
+        app.service("edit", function($rootScope, net) {
+            this.init = function(el, target) {
+                var el = angular.element(el);
+                var target = angular.element(target);
+
+
+
+                el.on("click", function() {
+                    $rootScope.editor_v = true;
+                    var e = angular.element(document.querySelectorAll(".ql-editor"));
+                    e[0].innerHTML = target[0].innerHTML;
+
+                    var s = angular.element(document.querySelectorAll(".editor-correct"));
+                    s.on("click", function() {
+                        s.off("click");
+                        c.off("click");
+                        target[0].innerHTML = e[0].innerHTML;
+                        $rootScope.editor_v = false;
+                        $rootScope.$apply()
+                        console.log("lol", target)
+                        net.editNote({
+                            timeid: target[0].parentElement.userData.timeid,
+                            content: target[0].innerHTML,
+                        })
+                    })
+
+                    var c = angular.element(document.querySelectorAll(".editor-cancel"));
+                    console.log(c);
+                    c.on("click", function() {
+                        c.off("click");
+                        $rootScope.editor_v = false;
+                        $rootScope.$apply()
+                    })
+                    $rootScope.$apply()
+
+                })
+            }
+        })
+
+        app.service("resize", function($document, net) {
+            this.init = function(el, toResize) {
+                //var document =d;
+                //console.log(body)
+                var el = angular.element(el);
+                var toResize = angular.element(toResize);
+
+                el.on("mousedown", function(event) {
+                    event.stopPropagation();
+                    var grab = false;
+                    var x0, y0;
+                    var w = toResize[0].clientWidth;
+                    var h = toResize[0].clientHeight;
+                    console.log("chwyt");
+                    grab = true;
+                    x0 = event.clientX;
+                    y0 = event.clientY;
+                    $document.on("mousemove", function(event) {
+                        if (grab) {
+                            //console.log("masumasu");
+                            //console.log(h, w, event.clientY - y0)
+                            var css = {
+                                "height": (h + (event.clientY - y0 - 10)) + "px",
+                                "width": (w + (event.clientX - x0) - 10) + "px",
+                            }
+                            //console.log(css)
+                            toResize.css(css);
+                        }
+
+                    });
+                    $document.on("mouseup", function() {
+                        net.resizeNote({
+                            timeid: toResize[0].userData.timeid,
+                            height: toResize[0].clientHeight,
+                            width: toResize[0].clientWidth,
+                        })
+                        console.log("puszczono");
+                        grab = false;
+                        $document.off("mouseup");
+                        $document.off("mousemove");
+
+                    });
+
+                });
+
+            }
+        })
+
+        app.service("drag", function($document, net) {
+            this.init = function(target) {
+                //var document =d;
+
+
+                var target = angular.element(target);
+                console.log(target[0])
+                target.on("mousedown", function(event) {
+
+                    var grab = false;
+                    var x0, y0;
+                    console.log("chwyt");
+                    grab = true;
+                    var t = target[0].offsetTop;
+                    var l = target[0].offsetLeft;
+
+                    x0 = event.clientX;
+                    y0 = event.clientY;
+
+
+                    $document.on("mousemove", function(event) {
+                        var css = {
+                            "top": (t + (event.clientY - y0 - 0)) + "px",
+                            "left": (l + (event.clientX - x0) - 0) + "px",
+                            background: "grey",
+                        }
+                        console.log(css)
+                        target.css(css);
+                    });
+                    $document.on("mouseup", function() {
+                        net.moveNote({
+                            timeid: target[0].userData.timeid,
+                            left: target[0].offsetLeft + "px",
+                            top: target[0].offsetTop + "px",
+                        })
+                        console.log("puszczono");
+                        grab = false;
+                        $document.off("mouseup");
+                        $document.off("mousemove");
+                        target.css({
+                            background: "white"
+                        });
+
+                    });
+
+                });
+
+            }
+        })
+
+
+
+
+        app.directive('note', function($rootScope, del, resize, drag, edit, net) {
+            return {
+                scope: {
+                    number: "=number",
+                },
+                link: function(scope, element, attrs) {
+                    var timeId = new Date().getTime();
+                    element[0].userData = {
+                        timeid: timeId
+                    }
+
+                    net.test();
+
+                    console.log(element, scope.number)
+                    del.init(angular.element(element[0].querySelector('.note-delete')), element[0]);
+
+                    edit.init(angular.element(element[0].querySelector('.note-edit')), angular.element(element[0].querySelector('.note-title')));
+
+                    resize.init(angular.element(element[0].querySelector('.note-resize')), element[0]);
+
+                    drag.init(element[0]);
+                    angular.element(element[0].querySelector('.note-title'))[0].innerHTML += scope.number;
+                    var elContent = angular.element(element[0].querySelector('.note-content'))[0];
+
+                    var css = {
+                        "left": 100 + "px",
+                        "top": 100 + "px",
+                        "z-index": $rootScope.noteCount,
+                    }
+                    element.css(css);
+
+                    var n = {
+                        timeid: timeId,
+                        left: css.left,
+                        top: css.top,
+                        index: css["z-index"],
+                        content: angular.element(element[0].querySelector('.note-title'))[0].innerHTML,
+                        width: element[0].clientWidth,
+                        height: element[0].clientHeight,
+
+                    }
+                    net.addNote(n);
+
+
+                    element.on("mousedown", function() {
+                        if (element[0].style.zIndex < $rootScope.noteCount) {
+                            for (var i in $rootScope.notes) {
+                                var ee = $rootScope.notes[i]
+                                console.log(ee)
+                                var index = ee[0].style.zIndex;
+                                if (element[0].style.zIndex < index)
+                                    index--;
+
+                                ee.css({
+                                    "z-index": index,
+                                });
+
+                                net.indexNote({
+                                    timeid: ee[0].userData.timeid,
+                                    index: ee[0].style.zIndex,
+                                })
+
+                            }
+
+                            var css = {
+                                "z-index": $rootScope.noteCount,
+                            }
+                            element.css(css);
+
+                            net.indexNote({
+                                timeid: element[0].userData.timeid,
+                                index: element[0].style.zIndex,
+                            })
+                        }
+
+
+                    });
+
+
+                },
+                templateUrl: 'note.html'
+            };
+        });
+
+
+
+        app.controller('MainController', function($rootScope, $scope, $compile, net) {
+            $rootScope.noteCount = 0;
+            $rootScope.noteCountTotal = 0;
+            $rootScope.notes = [];
+            $rootScope.editor_v = false;
+
+            net.getTotal(function(data) {
+
+                $rootScope.noteCountTotal = data[0].value;
+            })
+
+            $scope.addNote = function() {
+                console.log("Klik");
+                $rootScope.noteCount++;
+                $rootScope.noteCountTotal++;
+                var el = $compile("<note del resize drag number=noteCountTotal></note>")($scope);
+                angular.element(document).find("body").append(el);
+                $rootScope.notes.push(el);
+                console.log($rootScope.notes)
+            }
+
+        });
+
+    </script>
+
+</head>
+
+<body ng-app="myApp" ng-controller="MainController">
+    <button ng-click="addNote()">Add Note</button>
+    <div class="info">
+        <p>Total notes: {{noteCountTotal}}</p>
+        <p>Current notes: {{noteCount}}</p>
+    </div>
+    <div class="editor" ng-show="editor_v">
+        <div class="editor-box"></div>
+        <button class="editor-cancel">Abort</button>
+        <button class="editor-correct">Correct</button>
+    </div>
+
+</body>
+<script>
+    var options = {
+
+        placeholder: 'Compose an epic...',
+
+        theme: 'snow'
+    };
+    var editor = new Quill('.editor-box', options);
+
+</script>
+
+</html>
